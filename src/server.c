@@ -1,3 +1,4 @@
+#include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/socket.h>
@@ -44,6 +45,11 @@ int main() {
     char buffer[1024] = {0};
     ssize_t val_read = read(conn_fd, buffer, 1024 - 1);
     printf("%s\n", buffer);
+
+    char* response = "Hello Mark! King of Zapi-Zapi.";
+    if (send(conn_fd, response, strlen(response), 0) < 0) {
+        throw_error("Failed to send response");
+    }
 
     close(conn_fd);
     close(socket_fd);
