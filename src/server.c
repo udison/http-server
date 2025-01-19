@@ -37,22 +37,44 @@ int main() {
     }
     printf("Server listening on port 8080...\n");
 
-    int conn_fd = accept(socket_fd, (struct sockaddr*)&addr, &addr_len);
-    if (conn_fd < 0) {
-        throw_error("Error accepting connection");
+    static struct sockaddr_in cli_addr;
+    socklen_t cli_addr_len = sizeof(cli_addr);
+
+    for (int hit = 1;; hit++) {
+        int conn_fd = accept(socket_fd, (struct sockaddr*)&cli_addr, &cli_addr_len); 
+        if (conn_fd < 0) {
+            throw_error("Error accepting connection");
+        }
+
+        char buffer[1024] = {0};
+        ssize_t val_read = read(conn_fd, buffer, 1024 - 1);
+        printf("============ Connection %i ============ \n", hit);
+        printf("%s\n\n", buffer);
+
+        char* response = "Hello Mark! King of Zapi-Zapi.";
+        char header[1024] = {0};
+        sprintf(header,
+            "HTTP/1.1 200 OK\n"
+            "Server: rock/1.0\n"
+            "Content-Type: text/plain\n"
+            "Content-Length: %ld\r\n",
+            0l //strlen(response)
+        );
+
+        printf("Sending Header: %s\n", header);
+        if (write(conn_fd, header, strlen(header)) < 0) {
+            throw_error("Failed to send header");
+        }
+
+        // printf("Sending Response: %s\n", response);
+        // if (write(conn_fd, response, strlen(response)) < 0) {
+        //     throw_error("Failed to send response");
+        // }
+        printf("======== End of connection %i ========= \n", hit);
+
+        close(conn_fd);
     }
 
-    char buffer[1024] = {0};
-    ssize_t val_read = read(conn_fd, buffer, 1024 - 1);
-    printf("%s\n", buffer);
-
-    char* response = "Hello Mark! King of Zapi-Zapi.";
-    if (send(conn_fd, response, strlen(response), 0) < 0) {
-        throw_error("Failed to send response");
-    }
-
-    close(conn_fd);
     close(socket_fd);
-
     return 0;
 }
