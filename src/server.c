@@ -57,11 +57,14 @@ int main() {
             "HTTP/1.1 200 OK\n"
             "Server: rock/1.0\n"
             "Content-Type: text/plain\n"
-            "Content-Length: %ld\r\n",
-            0l //strlen(response)
+            "Content-Length: %ld\n"
+                "\n"
+                "%s\r\n",
+            strlen(response),
+            response
         );
 
-        printf("Sending Header: %s\n", header);
+        printf("Sending: %s\n", header);
         if (write(conn_fd, header, strlen(header)) < 0) {
             throw_error("Failed to send header");
         }
