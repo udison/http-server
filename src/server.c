@@ -49,30 +49,25 @@ int main() {
         char buffer[1024] = {0};
         ssize_t val_read = read(conn_fd, buffer, 1024 - 1);
         printf("============ Connection %i ============ \n", hit);
-        printf("%s\n\n", buffer);
+        printf("> Request\n%s\n\n", buffer);
 
-        char* response = "Hello Mark! King of Zapi-Zapi.";
-        char header[1024] = {0};
-        sprintf(header,
+        char* msg = "Hello Mark! King of Zapi-Zapi.";
+        char response[1024] = {0};
+        sprintf(response,
             "HTTP/1.1 200 OK\n"
             "Server: rock/1.0\n"
             "Content-Type: text/plain\n"
             "Content-Length: %ld\n"
                 "\n"
                 "%s\r\n",
-            strlen(response),
-            response
+            strlen(msg),
+            msg
         );
 
-        printf("Sending: %s\n", header);
-        if (write(conn_fd, header, strlen(header)) < 0) {
-            throw_error("Failed to send header");
+        printf("> Response\n%s\n", response);
+        if (write(conn_fd, response, strlen(response)) < 0) {
+            throw_error("Failed to send response");
         }
-
-        // printf("Sending Response: %s\n", response);
-        // if (write(conn_fd, response, strlen(response)) < 0) {
-        //     throw_error("Failed to send response");
-        // }
         printf("======== End of connection %i ========= \n", hit);
 
         close(conn_fd);
