@@ -1,3 +1,5 @@
+#include <errno.h>
+#include <stdint.h>
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -11,7 +13,21 @@ void throw_error(char* msg) {
     exit(EXIT_FAILURE);
 }
 
-int main() {
+int main(int argc, char* argv[]) {
+    for (int i = 1; i < argc; i++) {
+        printf("%i: %s\n", i, argv[i]);
+    }
+
+    if (argc < 2) {
+        throw_error("Port must be provided");
+    }
+
+    uint16_t port = atoi(argv[1]);
+    if (port <= 0 || argv[1][0] == '-') {
+        errno = EINVAL;
+        throw_error("Port must be a positive integer");
+    }
+
     int socket_fd = socket(AF_INET, SOCK_STREAM, 0);
     if (socket_fd < 0) {
         throw_error("Failed to create socket fd");
@@ -25,7 +41,7 @@ int main() {
     struct sockaddr_in addr = {
         .sin_family = AF_INET,
         .sin_addr.s_addr = INADDR_ANY,
-        .sin_port = htons(8080)
+        .sin_port = htons(port)
     };
     int addr_len = sizeof(addr);
     if (bind(socket_fd, (struct sockaddr*)&addr, addr_len) < 0) {
@@ -35,7 +51,7 @@ int main() {
     if (listen(socket_fd, 3) < 0) {
         throw_error("Failed to listen for connections");
     }
-    printf("Server listening on port 8080...\n");
+    printf("Server listening on port %i...\n", port);
 
     static struct sockaddr_in cli_addr;
     socklen_t cli_addr_len = sizeof(cli_addr);
