@@ -2,4 +2,4 @@
 
 clear
 ./build-server.sh
-./build/server $1
+./out/rock $1

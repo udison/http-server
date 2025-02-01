@@ -3,6 +3,8 @@
 #include <netinet/in.h>
 #include <stdint.h>
 #include <sys/socket.h>
+#include "constants.h"
+
 
 typedef struct Server { 
     struct sockaddr_in addr;
