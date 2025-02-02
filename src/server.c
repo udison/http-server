@@ -4,6 +4,7 @@
 #include <errno.h>
 #include <string.h>
 #include <unistd.h>
+#include <fcntl.h>
 
 
 void server_init(Server* server) {
@@ -55,29 +56,85 @@ void server_listen(Server* sv, uint16_t port) {
             log_error("Error accepting connection");
         }
 
-        char buffer[1024] = {0};
-        ssize_t val_read = read(conn_fd, buffer, 1024 - 1);
+        // Buffer - 8kb (BUFSIZE) + 1 (stream end char)
+        //        - static -> zero filled
+        static char buffer[BUFSIZE + 1];
+
+        ssize_t val_read = read(conn_fd, buffer, BUFSIZE);
         printf("============ Connection %i ============ \n", hit);
         printf("> Request\n%s\n\n", buffer);
 
-        char* msg = "Hello Mark! King of Zapi-Zapi.";
         char response[1024] = {0};
-        sprintf(response,
+
+        // Plain text response
+        // char* msg = "Hello Mark! King of Zapi-Zapi.";
+        // sprintf(response,
+        //     "HTTP/1.1 200 OK\n"
+        //     "Server: %s/%s\n"
+        //     "Content-Type: text/plain\n"
+        //     "Content-Length: %ld\n"
+        //         "\n"
+        //         "%s\r\n",
+        //     APP_NAME, APP_VERSION,
+        //     strlen(msg),
+        //     msg
+        // );
+
+        int file_fd = open("index.html", O_RDONLY);
+        if (file_fd < 0) {
+            const char* msg = "File \"index.html\" was not found";
+            sprintf(buffer,
+                "HTTP/1.1 404 NOT FOUND\n"
+                "Server: %s/%s\n"
+                "Content-Type: text/plain\n"
+                "Content-Length: %ld\n"
+                    "\n"
+                    "%s\r\n",
+                APP_NAME, APP_VERSION,
+                strlen(msg),
+                msg
+            );
+
+            write(conn_fd, buffer, strlen(buffer));
+            close(conn_fd);
+            printf("======== End of connection %i ========= \n", hit);
+            continue;
+        }
+
+        // Go to the end of the file to get its length
+        long file_len = (long)lseek(file_fd, (off_t)0, SEEK_END);
+
+        // Resets the file "iterator" to the beginning of it
+        (void)lseek(file_fd, (off_t)0, SEEK_SET);
+
+        // HTML page response header
+        sprintf(buffer,
             "HTTP/1.1 200 OK\n"
             "Server: %s/%s\n"
-            "Content-Type: text/plain\n"
+            "Content-Type: text/html\n"
             "Content-Length: %ld\n"
-                "\n"
-                "%s\r\n",
+            "Connection: close\n\n",
             APP_NAME, APP_VERSION,
-            strlen(msg),
-            msg
+            file_len
         );
 
-        printf("> Response\n%s\n", response);
-        if (write(conn_fd, response, strlen(response)) < 0) {
-            log_error("Failed to send response");
+        printf("> Response\n%s\n", buffer);
+        if (write(conn_fd, buffer, strlen(buffer)) < 0) {
+            log_error("Failed to send buffer");
         }
+
+        // Sends file in 8kb (BUFSIZE macro) chunks
+        long chunk_size;
+        while ((chunk_size = read(file_fd, buffer, BUFSIZE)) > 0) {
+            if (write(conn_fd, buffer, chunk_size) < 0) {
+                log_error("Failed to send file chunk");
+            }
+        }
+        printf("File \"index.html\" sent\n");
+
+        // Allow socket to drain before signalling the socket is closed
+        sleep(1); // i don't even know what the hell that means, but cool guy from IBM does this and so must I
+
         printf("======== End of connection %i ========= \n", hit);
 
         close(conn_fd);
